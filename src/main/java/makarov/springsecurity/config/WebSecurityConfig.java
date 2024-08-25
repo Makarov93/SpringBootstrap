@@ -1,59 +1,59 @@
 package makarov.springsecurity.config;
 
-import makarov.springsecurity.service.UserServiceImpl;
+import makarov.springsecurity.security.UserDetailsServiceSecurity;
+import makarov.springsecurity.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+    private final SuccessUserHandler successUserHandler;
+    private final UserDetailsServiceSecurity userDetailsServiceSecurity;
 
-    private final UserServiceImpl userService;
-    private LoginUserHandler loginUserHandler;
-
-    public WebSecurityConfig(UserServiceImpl userService, LoginUserHandler loginUserHandler) {
-        this.userService = userService;
-        this.loginUserHandler = loginUserHandler;
+    @Autowired
+    public WebSecurityConfig(SuccessUserHandler successUserHandler, UserService userService, UserDetailsServiceSecurity userDetailsServiceSecurity) {
+        this.successUserHandler = successUserHandler;
+        this.userDetailsServiceSecurity = userDetailsServiceSecurity;
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
+                .csrf().disable()
                 .authorizeRequests()
-                .antMatchers("/", "/index").permitAll()
-                .antMatchers("/admin/**").hasRole("ADMIN")
+                .antMatchers("/").permitAll()
                 .antMatchers("/user").hasAnyRole("USER", "ADMIN")
+                .antMatchers("/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
                 .and()
-                .formLogin()
-                .successHandler(successHandler()) // Используем кастомный SuccessHandler
+                .formLogin().successHandler(successUserHandler)
+                .loginPage("/login")
+                .usernameParameter("email")
+                .passwordParameter("password")
                 .permitAll()
                 .and()
                 .logout()
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login")
                 .permitAll();
-    }
-
-    @Bean
-    public AuthenticationSuccessHandler successHandler() {
-        return new LoginUserHandler();
-    }
-
-    @Override
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userService).passwordEncoder(passwordEncoder());
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return NoOpPasswordEncoder.getInstance();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        authenticationProvider.setPasswordEncoder(passwordEncoder());
+        authenticationProvider.setUserDetailsService(userDetailsServiceSecurity);
+        return authenticationProvider;
     }
 }

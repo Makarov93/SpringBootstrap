@@ -1,19 +1,24 @@
 package makarov.springsecurity.service;
 
 import makarov.springsecurity.model.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 
 import java.util.List;
+import java.util.Set;
 
-public interface UserService {
+
+public interface UserService extends UserDetailsService {
+    List<User> getUsers(int count);
+
+    void saveUser(User user, Set<String> roles);
+
     void deleteUser(Long id);
-
-    void saveUser(User user);
-
-    User updateUser(User user);
 
     User getUserById(Long id);
 
-    List<User> getAllUsers();
+    User findByEmail(String name);
 
-    User getUserByUsername(String username);
+    Set<String> getAllRolesNames();
+
+    void initializeDB();
 }

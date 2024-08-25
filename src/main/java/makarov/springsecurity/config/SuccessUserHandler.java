@@ -11,16 +11,16 @@ import java.io.IOException;
 import java.util.Set;
 
 @Component
-public class LoginUserHandler implements AuthenticationSuccessHandler {
+public class SuccessUserHandler implements AuthenticationSuccessHandler {
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication) throws IOException {
+    public void onAuthenticationSuccess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Authentication authentication) throws IOException {
         Set<String> roles = AuthorityUtils.authorityListToSet(authentication.getAuthorities());
-
         if (roles.contains("ROLE_ADMIN")) {
-            response.sendRedirect("/admin");
+            httpServletResponse.sendRedirect("/admin");
+        } else if (roles.contains("ROLE_USER")) {
+            httpServletResponse.sendRedirect("/user");
         } else {
-            response.sendRedirect("/user");
+            httpServletResponse.sendRedirect("/");
         }
     }
 }
