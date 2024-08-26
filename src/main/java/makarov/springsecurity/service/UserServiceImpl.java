@@ -5,12 +5,15 @@ import makarov.springsecurity.model.User;
 import makarov.springsecurity.repository.RoleRepository;
 import makarov.springsecurity.repository.UserRepository;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,7 +50,7 @@ public class UserServiceImpl implements UserService {
         Role adminRole = new Role("ADMIN");
         Role userRole = new Role("USER");
 
-        User user = new User("admin", "admin", (byte) 35, "admin@mail.com", "admin", Set.of(adminRole,userRole));
+        User user = new User("admin", "admin", (byte) 35, "admin@mail.com", "admin", Set.of(adminRole, userRole));
         User admin = new User("user", "user", (byte) 30, "user@mail.com", "user", Set.of(userRole));
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         admin.setPassword(passwordEncoder.encode(admin.getPassword()));
@@ -81,11 +84,24 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User getUserById(Long id) {
-        return userRepository.findById(id).get();
+        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    @Transactional
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return null;
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            throw new UsernameNotFoundException(String.format("There is no %s user", email));
+        }
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(), user.getPassword(), mapRolesToAuthority(user.getRoles()));
+    }
+
+    private Collection<? extends GrantedAuthority> mapRolesToAuthority(Set<Role> roles) {
+        return roles
+                .stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
+                .collect(Collectors.toList());
     }
 }
