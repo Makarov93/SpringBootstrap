@@ -72,7 +72,7 @@ public class UserServiceImpl implements UserService {
         } else {
             user.setRoles(roleRepository.findAllByNameIn(roles));
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setPassword(passwordEncoder.encode(user.getPassword()));  // Ensure the password is encoded
         userRepository.save(user);
     }
 
